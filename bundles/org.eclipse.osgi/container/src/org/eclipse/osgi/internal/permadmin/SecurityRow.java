@@ -253,11 +253,20 @@ public final class SecurityRow implements ConditionalPermissionInfo {
 			Constructor<?> constructor = null;
 			Method method = null;
 			try {
-				method = clazz.getMethod("getCondition", conditionMethodArgs); //$NON-NLS-1$
-				if ((method.getModifiers() & Modifier.STATIC) == 0)
-					method = null;
+				Method[] methods = clazz.getMethods();
+				boolean hasMethod = false;
+				for (Method checkMethod : methods) {
+					if (checkMethod.getName().equals("getCondition")) {
+						hasMethod = true;
+					}
+				}
+				if (hasMethod) {
+					method = clazz.getMethod("getCondition", conditionMethodArgs); //$NON-NLS-1$
+					if ((method.getModifiers() & Modifier.STATIC) == 0)
+						method = null;
+				}
 			} catch (NoSuchMethodException e) {
-				// This is a normal case
+				// This should not happen
 			}
 			if (method == null)
 				try {
