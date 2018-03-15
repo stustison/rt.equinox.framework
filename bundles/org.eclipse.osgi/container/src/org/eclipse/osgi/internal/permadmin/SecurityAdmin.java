@@ -4,7 +4,7 @@
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- * 
+ *
  * Contributors:
  *     IBM Corporation - initial API and implementation
  *******************************************************************************/
@@ -405,6 +405,7 @@ public final class SecurityAdmin implements PermissionAdmin, ConditionalPermissi
 			permAdminCollections[i].clearPermissionCache();
 		for (int i = 0; i < condAdminRows.length; i++)
 			condAdminRows[i].clearCaches();
+		condAdminTable.clearEvaluationCache();
 	}
 
 	EquinoxSecurityManager getSupportedSecurityManager() {

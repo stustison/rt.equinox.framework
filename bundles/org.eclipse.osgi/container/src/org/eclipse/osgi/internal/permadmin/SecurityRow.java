@@ -4,7 +4,7 @@
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- * 
+ *
  * Contributors:
  *     IBM Corporation - initial API and implementation
  *******************************************************************************/
@@ -248,38 +248,75 @@ public final class SecurityRow implements ConditionalPermissionInfo {
 				clazz = Class.forName(conditionInfos[i].getType());
 			} catch (ClassNotFoundException e) {
 				/* If the class isn't there, we fail */
-				return null;
+				return new Condition[0];
 			}
 			Constructor<?> constructor = null;
-			Method method = null;
-			try {
-				method = clazz.getMethod("getCondition", conditionMethodArgs); //$NON-NLS-1$
-				if ((method.getModifiers() & Modifier.STATIC) == 0)
-					method = null;
-			} catch (NoSuchMethodException e) {
-				// This is a normal case
-			}
-			if (method == null)
-				try {
-					constructor = clazz.getConstructor(conditionMethodArgs);
-				} catch (NoSuchMethodException e) {
+			Method method = getConditionMethod(clazz);
+			if (method == null) {
+				constructor = getConditionConstructor(clazz);
+				if (constructor == null) {
 					// TODO should post a FrameworkEvent of type error here
 					conditions[i] = Condition.FALSE;
 					continue;
 				}
+			}
 
-			Object args[] = {bundle, conditionInfos[i]};
+			Object[] args = {bundle, conditionInfos[i]};
 			try {
 				if (method != null)
 					conditions[i] = (Condition) method.invoke(null, args);
 				else
 					conditions[i] = (Condition) constructor.newInstance(args);
-			} catch (Throwable t) {
+			} catch (Exception e) {
 				// TODO should post a FrameworkEvent of type error here
 				conditions[i] = Condition.FALSE;
 			}
 		}
 		return conditions;
+	}
+
+	private Method getConditionMethod(Class<?> clazz) {
+		Method method = null;
+		try {
+			Method[] methods = clazz.getMethods();
+			boolean hasMethod = false;
+			for (Method checkMethod : methods) {
+				if (checkMethod.getName().equals("getCondition")) {
+					hasMethod = true;
+					break;
+				}
+			}
+			if (hasMethod) {
+				method = clazz.getMethod("getCondition", conditionMethodArgs); //$NON-NLS-1$
+				if ((method.getModifiers() & Modifier.STATIC) == 0)
+					method = null;
+			}
+		} catch (NoSuchMethodException e) {
+			// This should not happen
+		}
+		return method;
+	}
+
+	private Constructor<?> getConditionConstructor(Class<?> clazz) {
+		Constructor<?> constructor = null;
+		try {
+			Constructor<?>[] constructors = clazz.getConstructors();
+			boolean hasConstructor = false;
+			for (Constructor<?> checkConstructor : constructors) {
+				Class<?>[] parameterTypes = checkConstructor.getParameterTypes();
+				if (parameterTypes.length == 2 && (parameterTypes[0].isAssignableFrom(Bundle.class)
+						&& parameterTypes[1].isAssignableFrom(ConditionInfo.class))) {
+					hasConstructor = true;
+					break;
+				}
+			}
+			if (hasConstructor) {
+				constructor = clazz.getConstructor(conditionMethodArgs);
+			}
+		} catch (NoSuchMethodException e) {
+			// This should not happen
+		}
+		return constructor;
 	}
 
 	Decision evaluate(BundlePermissions bundlePermissions, Permission permission) {
